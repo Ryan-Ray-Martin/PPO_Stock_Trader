@@ -1,1 +1,0 @@
-POLYGON_API_KEY = '&apiKey=x6XqEaDjOWJXwVQRyBQ5kMEi8KlCYZqo'
