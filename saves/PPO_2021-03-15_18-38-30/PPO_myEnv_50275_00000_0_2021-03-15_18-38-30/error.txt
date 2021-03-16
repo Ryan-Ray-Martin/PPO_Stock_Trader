@@ -1,0 +1,38 @@
+Failure # 1 (occurred at 2021-03-15_18-38-36)
+Traceback (most recent call last):
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/tune/trial_runner.py", line 519, in _process_trial
+    result = self.trial_executor.fetch_result(trial)
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/tune/ray_trial_executor.py", line 497, in fetch_result
+    result = ray.get(trial_future[0], timeout=DEFAULT_GET_TIMEOUT)
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/worker.py", line 1379, in get
+    raise value.as_instanceof_cause()
+ray.exceptions.RayTaskError: [36mray::PPO.train()[39m (pid=9353, ip=10.0.0.42)
+  File "python/ray/_raylet.pyx", line 422, in ray._raylet.execute_task
+  File "python/ray/_raylet.pyx", line 456, in ray._raylet.execute_task
+  File "python/ray/_raylet.pyx", line 459, in ray._raylet.execute_task
+  File "python/ray/_raylet.pyx", line 463, in ray._raylet.execute_task
+  File "python/ray/_raylet.pyx", line 415, in ray._raylet.execute_task.function_executor
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/rllib/agents/trainer_template.py", line 106, in __init__
+    Trainer.__init__(self, config, env, logger_creator)
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/rllib/agents/trainer.py", line 465, in __init__
+    super().__init__(config, logger_creator)
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/tune/trainable.py", line 96, in __init__
+    self.setup(copy.deepcopy(self.config))
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/rllib/agents/trainer.py", line 629, in setup
+    self._init(self.config, self.env_creator)
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/rllib/agents/trainer_template.py", line 138, in _init
+    num_workers=self.config["num_workers"])
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/rllib/agents/trainer.py", line 706, in _make_workers
+    logdir=self.logdir)
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/rllib/evaluation/worker_set.py", line 95, in __init__
+    spaces=spaces,
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/rllib/evaluation/worker_set.py", line 355, in _make_worker
+    _use_trajectory_view_api=config["_use_trajectory_view_api"],
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/rllib/evaluation/rollout_worker.py", line 463, in __init__
+    policy_dict, policy_config)
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/rllib/evaluation/rollout_worker.py", line 1053, in _build_policy_map
+    obs_space, merged_conf.get("model"))
+  File "/Users/user/anaconda3/lib/python3.7/site-packages/ray/rllib/models/catalog.py", line 478, in get_preprocessor_for_space
+    k, list(MODEL_DEFAULTS)))
+Exception: Unknown config key `use_attention`, all keys: ['fcnet_hiddens', 'fcnet_activation', 'conv_filters', 'conv_activation', 'free_log_std', 'no_final_linear', 'vf_share_layers', 'use_lstm', 'max_seq_len', 'lstm_cell_size', 'lstm_use_prev_action', 'lstm_use_prev_reward', '_time_major', 'framestack', 'dim', 'grayscale', 'zero_mean', 'custom_model', 'custom_model_config', 'custom_action_dist', 'custom_preprocessor', 'lstm_use_prev_action_reward']
+
