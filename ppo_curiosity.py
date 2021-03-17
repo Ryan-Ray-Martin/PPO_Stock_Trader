@@ -30,9 +30,9 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--run", type=str, default="PPO")
 parser.add_argument("--torch", action="store_true")
 parser.add_argument("--as-test", action="store_true")
-parser.add_argument("--stop-iters", type=int, default=50)
+parser.add_argument("--stop-iters", type=int, default=100)
 parser.add_argument("--stop-timesteps", type=int, default=100000)
-parser.add_argument("--stop-reward", type=float, default=0.1)
+parser.add_argument("--stop-reward", type=float, default=0.25)
 
 args = parser.parse_args()
 
@@ -44,8 +44,8 @@ def env_creator(env_name):
     return env
 
 # register the env
-BARS_COUNT = 120
-STOCKS = 'stock_prices__min_train.csv'
+BARS_COUNT = 35
+STOCKS = 'stock_prices__min_train_NIO.csv'
 stock_data = {"NIO": data.load_relative(STOCKS)}
 env = env_creator("StocksEnv-v0")
 tune.register_env('myEnv', lambda config: env(stock_data, bars_count=BARS_COUNT, state_1d=False))
@@ -74,9 +74,9 @@ class Training(object):
     def __init__(self):
         ray.shutdown()
         ray.init(num_cpus=16, num_gpus=0, ignore_reinit_error=True)
-        #ModelCatalog.register_custom_model(
-        #"my_model", TorchCustomModel)
-        ModelCatalog.register_custom_model("attention_net", GTrXLNet)
+        ModelCatalog.register_custom_model(
+        "my_model", TorchCustomModel)
+        #ModelCatalog.register_custom_model("attention_net", GTrXLNet)
         self.run = args.run
         self.config_model = {
             "env": "myEnv",  
@@ -86,14 +86,14 @@ class Training(object):
                 "custom_model": "my_model",
                 #"conv_filters": None,
                 #"conv_activation": "relu",
-                "use_lstm": True,
-                "lstm_use_prev_action": True,
-                "lstm_use_prev_reward": True,
+                #"use_lstm": True,
+                #"lstm_use_prev_action": True,
+                #"lstm_use_prev_reward": True,
+                "vf_share_layers": False,
             },
             "batch_mode": "truncate_episodes",
             "sgd_minibatch_size": 32,
             "num_sgd_iter": 10,
-            "vf_share_layers": False,
             "lr": 3e-3,  # try different lrs
             "num_workers": 1,  # parallelism
             "framework": "torch",
@@ -188,11 +188,11 @@ class Training(object):
     def test(self):
         """Test trained agent for a single episode. Return the episode reward"""
         # instantiate env 
-        STOCKS = 'stock_prices__min_test_nvda.csv'
+        STOCKS = 'stock_prices__min_test_RIOT.csv'
         stock_data = {"RIOT": data.load_relative(STOCKS)}
         env = environ.StocksEnv(
             stock_data,
-            bars_count=120,
+            bars_count=35,
             reset_on_close=False,
             commission=0.00,
             state_1d=False,
@@ -206,7 +206,7 @@ class Training(object):
 
         obs = env.reset()
         while True:
-            action = self.agent.compute_action(obs, prev_action=True, prev_reward=True, full_fetch=False)
+            action = self.agent.compute_action(obs)
             obs, reward, done, _ = env.step(action)
             print("done", done)
             episode_reward += reward
@@ -218,21 +218,21 @@ class Training(object):
         
         rewards_data = pd.DataFrame(rewards)
         
-        print("Sharpe", rewards_data.apply(self.sharpe, freq=128, rfr=0))
+        print("Sharpe", rewards_data.apply(self.sharpe, freq=125, rfr=0))
 
         print("Max Drawdown", rewards_data.apply(self.max_drawdown))
 
         # plot rewards
         plt.clf()
         plt.plot(rewards)
-        plt.title("Total reward, data=NVDA")
+        plt.title("Total reward, data=RIOT")
         plt.ylabel("Reward, %")
-        plt.savefig("curiousity_NVDA.png")
+        plt.savefig("curiousity_model_test_RIOT_35.png")
     
 
     
 if __name__ == "__main__":
-    checkpoint_path = "saves/PPO_2021-03-15_18-18-07/PPO_myEnv_77137_00000_0_2021-03-15_18-18-07/checkpoint_25/checkpoint-25"
+    checkpoint_path = "saves/PPO_2021-03-16_17-04-41/PPO_myEnv_5f0e0_00000_0_2021-03-16_17-04-41/checkpoint_25/checkpoint-25"
     training = Training()
     # Train and save 
     #checkpoint_path, results = training.train()

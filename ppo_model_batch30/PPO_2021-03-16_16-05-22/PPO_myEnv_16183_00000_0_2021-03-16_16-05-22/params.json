@@ -1,0 +1,36 @@
+{
+  "batch_mode": "truncate_episodes",
+  "env": "myEnv",
+  "exploration_config": {
+    "beta": 0.2,
+    "eta": 1.0,
+    "feature_dim": 288,
+    "feature_net_config": {
+      "fcnet_activation": "relu",
+      "fcnet_hiddens": []
+    },
+    "forward_net_activation": "relu",
+    "forward_net_hiddens": [
+      256
+    ],
+    "inverse_net_activation": "relu",
+    "inverse_net_hiddens": [
+      256
+    ],
+    "lr": 0.001,
+    "sub_exploration": {
+      "type": "StochasticSampling"
+    },
+    "type": "Curiosity"
+  },
+  "framework": "torch",
+  "lr": 0.003,
+  "model": {
+    "custom_model": "my_model",
+    "vf_share_layers": false
+  },
+  "num_gpus": 0,
+  "num_sgd_iter": 10,
+  "num_workers": 0,
+  "sgd_minibatch_size": 32
+}
