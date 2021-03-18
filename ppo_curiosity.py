@@ -44,8 +44,8 @@ def env_creator(env_name):
     return env
 
 # register the env
-BARS_COUNT = 35
-STOCKS = 'stock_prices__min_train_NIO.csv'
+BARS_COUNT = 30
+STOCKS = 'crypto_prices__min_train_BITCOIN.csv'
 stock_data = {"NIO": data.load_relative(STOCKS)}
 env = env_creator("StocksEnv-v0")
 tune.register_env('myEnv', lambda config: env(stock_data, bars_count=BARS_COUNT, state_1d=False))
@@ -188,11 +188,11 @@ class Training(object):
     def test(self):
         """Test trained agent for a single episode. Return the episode reward"""
         # instantiate env 
-        STOCKS = 'stock_prices__min_test_RIOT.csv'
-        stock_data = {"RIOT": data.load_relative(STOCKS)}
+        STOCKS = 'cryto_prices__min_test_DOGECOIN.csv'
+        stock_data = {"NVDA": data.load_relative(STOCKS)}
         env = environ.StocksEnv(
             stock_data,
-            bars_count=35,
+            bars_count=30,
             reset_on_close=False,
             commission=0.00,
             state_1d=False,
@@ -225,14 +225,14 @@ class Training(object):
         # plot rewards
         plt.clf()
         plt.plot(rewards)
-        plt.title("Total reward, data=RIOT")
+        plt.title("Total reward, data=DOGECOIN")
         plt.ylabel("Reward, %")
-        plt.savefig("curiousity_model_test_RIOT_35.png")
+        plt.savefig("curiousity_model_test_DOGECOIN_30.png")
     
 
     
 if __name__ == "__main__":
-    checkpoint_path = "saves/PPO_2021-03-16_17-04-41/PPO_myEnv_5f0e0_00000_0_2021-03-16_17-04-41/checkpoint_25/checkpoint-25"
+    checkpoint_path = "saves/PPO_2021-03-17_13-47-29/PPO_myEnv_fd162_00000_0_2021-03-17_13-47-29/checkpoint_25/checkpoint-25"
     training = Training()
     # Train and save 
     #checkpoint_path, results = training.train()
