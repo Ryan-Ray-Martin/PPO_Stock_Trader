@@ -188,8 +188,8 @@ class Training(object):
     def test(self):
         """Test trained agent for a single episode. Return the episode reward"""
         # instantiate env 
-        STOCKS = 'cryto_prices__min_test_DOGECOIN.csv'
-        stock_data = {"NVDA": data.load_relative(STOCKS)}
+        STOCKS = 'stock_prices__min_train_RIOT.csv'
+        stock_data = {"RIOT": data.load_relative(STOCKS)}
         env = environ.StocksEnv(
             stock_data,
             bars_count=30,
@@ -225,14 +225,14 @@ class Training(object):
         # plot rewards
         plt.clf()
         plt.plot(rewards)
-        plt.title("Total reward, data=DOGECOIN")
+        plt.title("Total reward, data=RIOT")
         plt.ylabel("Reward, %")
-        plt.savefig("curiousity_model_test_DOGECOIN_30.png")
+        plt.savefig("ppo_curiousity_model_test_RIOT_30.png")
     
 
     
 if __name__ == "__main__":
-    checkpoint_path = "saves/PPO_2021-03-17_13-47-29/PPO_myEnv_fd162_00000_0_2021-03-17_13-47-29/checkpoint_25/checkpoint-25"
+    checkpoint_path = "ppo_model_batch30/PPO_2021-03-16_16-05-22/PPO_myEnv_16183_00000_0_2021-03-16_16-05-22/checkpoint_25/checkpoint-25"
     training = Training()
     # Train and save 
     #checkpoint_path, results = training.train()

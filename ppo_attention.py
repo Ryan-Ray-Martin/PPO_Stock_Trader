@@ -7,6 +7,8 @@ import pandas as pd
 
 import ray
 from ray import tune
+import ray.rllib.agents.sac as sac
+import ray.rllib.agents.cql as cql
 from ray.tune import grid_search, analysis
 from ray.rllib.models import ModelCatalog
 from ray.rllib.models.tf.tf_modelv2 import TFModelV2
@@ -17,11 +19,17 @@ from ray.rllib.utils.framework import try_import_tf, try_import_torch
 from ray.rllib.utils.test_utils import check_learning_achieved
 from ray.tune.registry import register_env
 from ray.rllib.agents import dqn
-from ray.rllib.agents.dqn.dqn import execution_plan
-from ray.rllib.agents.dqn.dqn_tf_policy import DQNTFPolicy
-from ray.rllib.agents.dqn.dqn_torch_policy import DQNTorchPolicy
+import logging
+from typing import Optional, Type
+from ray.rllib.agents.trainer import with_common_config
+from ray.rllib.agents.dqn.dqn import GenericOffPolicyTrainer
+from ray.rllib.agents.sac.sac_tf_policy import SACTFPolicy
 from ray.rllib.policy.policy import Policy
+from ray.rllib.utils.deprecation import DEPRECATED_VALUE, deprecation_warning
 from ray.rllib.utils.typing import TrainerConfigDict
+from ray.rllib.agents.dqn.dqn import execution_plan
+from ray.rllib.examples.models.batch_norm_model import TorchBatchNormModel
+from ray.rllib.models.tf.attention_net import GTrXLNet
 from lib import data, environ
 import shutil
 import matplotlib as mpl
@@ -32,12 +40,12 @@ tf1, tf, tfv = try_import_tf()
 torch, nn = try_import_torch()
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--run", type=str, default="DQN")
+parser.add_argument("--run", type=str, default="SAC")
 parser.add_argument("--torch", action="store_true")
 parser.add_argument("--as-test", action="store_true")
-parser.add_argument("--stop-iters", type=int, default=100)
+parser.add_argument("--stop-iters", type=int, default=50)
 parser.add_argument("--stop-timesteps", type=int, default=100000)
-parser.add_argument("--stop-reward", type=float, default=0.01)
+parser.add_argument("--stop-reward", type=float, default=1.0)
 
 args = parser.parse_args()
 
@@ -79,24 +87,32 @@ class Training(object):
     def __init__(self):
         ray.shutdown()
         ray.init(num_cpus=16, num_gpus=0, ignore_reinit_error=True)
+        ModelCatalog.register_custom_model(
+        "my_model", TorchCustomModel)
+        #ModelCatalog.register_custom_model("attention_net", GTrXLNet)
         #ModelCatalog.register_custom_model(
         #"my_model", TorchCustomModel)
-        #ModelCatalog.register_custom_model("attention_net", GTrXLNet)
+        #ModelCatalog.register_custom_model("batch_norm_torch",
+                                           #TorchBatchNormModel)
         self.run = args.run
-        self.config_model = dqn.R2D2_DEFAULT_CONFIG.copy()
-        self.config_model["num_workers"] = 0  # Run locally.
-        # Wrap with an LSTM and use a very simple base-model.
-        self.config_model["model"]["use_lstm"] = True
-        self.config_model["model"]["max_seq_len"] = 20
-        self.config_model["model"]["fcnet_hiddens"] = [32]
-        self.config_model["model"]["lstm_cell_size"] = 64
-
-        self.config_model["burn_in"] = 20
-        self.config_model["zero_init_states"] = True
-
-        self.config_model["dueling"] = False
-        self.config_model["lr"] = 5e-4
-        self.config_model["exploration_config"]["epsilon_timesteps"] = 100000
+        self.config_model = sac.DEFAULT_CONFIG.copy()
+        self.config_model["policy_model"] = sac.DEFAULT_CONFIG["policy_model"].copy()
+        self.config_model["env"] = "myEnv" 
+        self.config_model["gamma"] = 1.0
+        self.config_model["no_done_at_end"] = True
+        self.config_model["tau"] = 3e-3
+        self.config_model["target_network_update_freq"] = 32
+        self.config_model["num_workers"] = 1  # Run locally.
+        self.config_model["twin_q"] = True
+        self.config_model["clip_actions"] = True
+        self.config_model["normalize_actions"] = True
+        self.config_model["learning_starts"] = 0
+        self.config_model["prioritized_replay"] = True
+        self.config_model["train_batch_size"] = 32
+        self.config_model["optimization"]["actor_learning_rate"] = 0.01
+        self.config_model["optimization"]["critic_learning_rate"] = 0.01
+        self.config_model["optimization"]["entropy_learning_rate"] = 0.003
+        self.config_model["num_workers"] = 0
 
         self.stop = {
             "training_iteration": args.stop_iters,
@@ -134,10 +150,9 @@ class Training(object):
         shutil.rmtree(ray_results, ignore_errors=True, onerror=None)
 
         analysis = ray.tune.run(
-            ray.rllib.agents.dqn.R2D2Trainer,
+            ray.rllib.agents.sac.SACTrainer,
             config=self.config_model,
             local_dir=saves_root,
-            env="myEnv",
             stop=self.stop,
             checkpoint_at_end = True)
 
@@ -160,14 +175,14 @@ class Training(object):
         Load a trained RLlib agent from the specified path. Call this before testing a trained agent.
         :param path: Path pointing to the agent's saved checkpoint (only used for RLlib agents)
         """
-        self.agent = ray.rllib.agents.ppo.PPOTrainer(config=self.config_model, env="myEnv")
+        self.agent = ray.rllib.agents.sac.SACTrainer(config=self.config_model, env="myEnv")
         self.agent.restore(path)
     
     def test(self):
         """Test trained agent for a single episode. Return the episode reward"""
         # instantiate env 
-        STOCKS = 'stock_prices__min_test_NVDA.csv'
-        stock_data = {"NVDA": data.load_relative(STOCKS)}
+        STOCKS = 'stock_prices__min_train_RIOT.csv'
+        stock_data = {"RIOT": data.load_relative(STOCKS)}
         env = environ.StocksEnv(
             stock_data,
             bars_count=30,
@@ -203,14 +218,14 @@ class Training(object):
         # plot rewards
         plt.clf()
         plt.plot(rewards)
-        plt.title("Total reward, data=NVDA")
+        plt.title("Total reward, data=RIOT")
         plt.ylabel("Reward, %")
-        plt.savefig("curiousity_model_test_NVDA_30.png")
+        plt.savefig("SAC_model_test_RIOT_30.png")
     
 
     
 if __name__ == "__main__":
-    checkpoint_path = "ppo_model_batch30/PPO_2021-03-16_16-05-22/PPO_myEnv_16183_00000_0_2021-03-16_16-05-22/checkpoint_25/checkpoint-25"
+    checkpoint_path = "SAC_model_.5/SAC_myEnv_c17e4_00000_0_2021-03-27_18-20-17/checkpoint_4/checkpoint-4"
     training = Training()
     # Train and save 
     #checkpoint_path, results = training.train()
