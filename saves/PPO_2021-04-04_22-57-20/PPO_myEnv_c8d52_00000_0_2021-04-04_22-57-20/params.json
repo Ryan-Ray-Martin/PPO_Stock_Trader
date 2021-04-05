@@ -1,0 +1,13 @@
+{
+  "batch_mode": "truncate_episodes",
+  "env": "myEnv",
+  "framework": "tf",
+  "lr": 0.003,
+  "model": {
+    "custom_model": "attention_net"
+  },
+  "num_gpus": 0,
+  "num_sgd_iter": 10,
+  "num_workers": 0,
+  "sgd_minibatch_size": 32
+}

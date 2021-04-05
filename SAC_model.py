@@ -97,6 +97,7 @@ class Training(object):
         self.run = args.run
         self.config_model = sac.DEFAULT_CONFIG.copy()
         self.config_model["policy_model"] = sac.DEFAULT_CONFIG["policy_model"].copy()
+        self.config_model["policy_model"]["custom_model"] = "my_model"
         self.config_model["env"] = "myEnv" 
         self.config_model["gamma"] = 1.0
         self.config_model["no_done_at_end"] = True
@@ -113,6 +114,29 @@ class Training(object):
         self.config_model["optimization"]["critic_learning_rate"] = 0.01
         self.config_model["optimization"]["entropy_learning_rate"] = 0.003
         self.config_model["num_workers"] = 0
+
+        
+        self.config_model["exploration_config"] = {
+            "type": "Curiosity",  # <- Use the Curiosity module for exploring.
+            "eta": 1.0,  # Weight for intrinsic rewards before being added to extrinsic ones.
+            "lr": 0.001,  # Learning rate of the curiosity (ICM) module.
+            "feature_dim": 288,  # Dimensionality of the generated feature vectors.
+            # Setup of the feature net (used to encode observations into feature (latent) vectors).
+            "feature_net_config": {
+                "fcnet_hiddens": [],
+                "fcnet_activation": "relu",
+            },
+            "inverse_net_hiddens": [256],  # Hidden layers of the "inverse" model.
+            "inverse_net_activation": "relu",  # Activation of the "inverse" model.
+            "forward_net_hiddens": [256],  # Hidden layers of the "forward" model.
+            "forward_net_activation": "relu",  # Activation of the "forward" model.
+            "beta": 0.2,  # Weight for the "forward" loss (beta) over the "inverse" loss (1.0 - beta).
+            # Specify, which exploration sub-type to use (usually, the algo's "default"
+            # exploration, e.g. EpsilonGreedy for DQN, StochasticSampling for PG/SAC).
+            "sub_exploration": {
+                "type": "StochasticSampling",
+            }
+        }
 
         self.stop = {
             "training_iteration": args.stop_iters,
@@ -181,8 +205,8 @@ class Training(object):
     def test(self):
         """Test trained agent for a single episode. Return the episode reward"""
         # instantiate env 
-        STOCKS = 'stock_prices__min_train_RIOT.csv'
-        stock_data = {"RIOT": data.load_relative(STOCKS)}
+        STOCKS = 'stock_prices__min_train_NET.csv'
+        stock_data = {" net": data.load_relative(STOCKS)}
         env = environ.StocksEnv(
             stock_data,
             bars_count=30,
@@ -218,18 +242,18 @@ class Training(object):
         # plot rewards
         plt.clf()
         plt.plot(rewards)
-        plt.title("Total reward, data=RIOT")
+        plt.title("Total reward, data=NET")
         plt.ylabel("Reward, %")
-        plt.savefig("SAC_model_test_RIOT_30.png")
+        plt.savefig("SAC_model_test_NET_30.png")
     
 
     
 if __name__ == "__main__":
-    checkpoint_path = "SAC_model_.5/SAC_myEnv_c17e4_00000_0_2021-03-27_18-20-17/checkpoint_4/checkpoint-4"
+    #checkpoint_path = "SAC_model_.5/SAC_myEnv_c17e4_00000_0_2021-03-27_18-20-17/checkpoint_4/checkpoint-4"
     training = Training()
     # Train and save 
-    #checkpoint_path, results = training.train()
+    checkpoint_path, results = training.train()
     # Load saved
-    training.load(checkpoint_path)
+    #training.load(checkpoint_path)
     # Test loaded
-    training.test()
+    #training.test()
